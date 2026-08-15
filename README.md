@@ -1,8 +1,8 @@
 # Restaurant Commercial Intelligence & Menu Engineering
 
-> **End-to-end business analytics project** for a UK multi-location restaurant group — covering menu engineering, location profitability, marketing ROI, competitor benchmarking, and labour cost optimization.
+> **This is a business analytics project** for a UK multi-location restaurant group — covering menu engineering, location profitability, marketing ROI, competitor benchmarking, and labour cost optimization.
 
-Built as a portfolio piece targeting **Business Analyst (Media & Commercial Research)** roles in the food services sector.
+Built as a portfolio piece targeting **Business Analyst** roles in the food services sector.
 
 ---
 
