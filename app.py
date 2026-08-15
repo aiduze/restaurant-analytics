@@ -1,7 +1,6 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
-import matplotlib.pyplot as plt
 import os
 
 st.set_page_config(
@@ -12,31 +11,168 @@ st.set_page_config(
 )
 
 # ============================================================
-# DATA LOADING
+# DATA GENERATION (runs on Streamlit Cloud if data missing)
 # ============================================================
 @st.cache_data
-def load_data():
-    if os.path.exists('data/restaurant_transactions.csv'):
-        df_txn = pd.read_csv('data/restaurant_transactions.csv')
-        df_labour = pd.read_csv('data/restaurant_labour.csv')
-        df_campaigns = pd.read_csv('data/restaurant_campaigns.csv')
-        competitor_prices = pd.read_csv('data/competitor_prices.csv')
-    else:
-        st.error("Data not found. Run: python generate_data.py")
-        return None, None, None, None
+def generate_and_load_data():
+    np.random.seed(2026)
+    n = 8000
+    states = ['Lagos', 'Kano', 'Rivers', 'Kaduna', 'Oyo', 'FCT Abuja', 'Delta', 'Ogun', 'Anambra', 'Enugu']
 
+    # This is a simplified fallback - the full generate_data.py should be run locally
+    # For Streamlit Cloud, we generate minimal data inline
+
+    N_DAYS = 365
+    START_DATE = pd.Timestamp('2025-06-01')
+    locations = ['Fareham', 'Bexley', 'Leamington Spa']
+    location_weights = [0.45, 0.35, 0.20]
+
+    menu_items = {
+        'Kung Pao Chicken': {'category': 'Mains', 'cost': 4.50, 'price': 12.95, 'prep_time': 12},
+        'Sweet & Sour Pork': {'category': 'Mains', 'cost': 4.20, 'price': 11.95, 'prep_time': 10},
+        'Beef Chow Mein': {'category': 'Noodles', 'cost': 3.80, 'price': 10.95, 'prep_time': 8},
+        'Prawn Crackers': {'category': 'Starters', 'cost': 0.80, 'price': 3.50, 'prep_time': 2},
+        'Spring Rolls (4)': {'category': 'Starters', 'cost': 1.50, 'price': 5.95, 'prep_time': 5},
+        'Crispy Duck (Half)': {'category': 'Mains', 'cost': 6.50, 'price': 18.95, 'prep_time': 15},
+        'Vegetable Fried Rice': {'category': 'Sides', 'cost': 1.20, 'price': 4.50, 'prep_time': 5},
+        'Egg Fried Rice': {'category': 'Sides', 'cost': 1.00, 'price': 3.95, 'prep_time': 4},
+        'Special Fried Rice': {'category': 'Mains', 'cost': 3.50, 'price': 11.50, 'prep_time': 10},
+        'Crispy Chilli Beef': {'category': 'Mains', 'cost': 4.80, 'price': 13.95, 'prep_time': 12},
+        'Salt & Pepper Squid': {'category': 'Starters', 'cost': 3.20, 'price': 8.95, 'prep_time': 8},
+        'Sesame Prawn Toast': {'category': 'Starters', 'cost': 2.00, 'price': 6.50, 'prep_time': 6},
+        'Tofu & Vegetable Stir-fry': {'category': 'Mains', 'cost': 2.80, 'price': 9.95, 'prep_time': 8},
+        'Soft Drinks': {'category': 'Drinks', 'cost': 0.40, 'price': 2.95, 'prep_time': 1},
+        'House Wine (Glass)': {'category': 'Drinks', 'cost': 2.50, 'price': 6.95, 'prep_time': 1},
+        'Beer (Bottle)': {'category': 'Drinks', 'cost': 1.80, 'price': 5.50, 'prep_time': 1},
+    }
+
+    # Generate transactions
+    transactions = []
+    order_id = 10000
+
+    for day_offset in range(N_DAYS):
+        date = START_DATE + pd.Timedelta(days=day_offset)
+        month_factor = 1.4 if date.month == 12 else 1.2 if date.month == 11 else 0.75 if date.month in [1, 2] else 1.1 if date.month in [7, 8] else 1.0
+        dow_factor = {0: 0.6, 1: 0.65, 2: 0.75, 3: 0.85, 4: 1.1, 5: 1.4, 6: 1.2}[date.weekday()]
+
+        for loc in locations:
+            loc_idx = locations.index(loc)
+            base_orders = int(np.random.poisson(80 * location_weights[loc_idx] * month_factor * dow_factor))
+
+            for _ in range(base_orders):
+                order_id += 1
+                order_type = np.random.choice(['Dine-in', 'Takeaway', 'Delivery'], p=[0.50, 0.30, 0.20])
+                n_items = np.random.choice([1, 2, 3, 4, 5, 6], p=[0.10, 0.20, 0.25, 0.20, 0.15, 0.10])
+
+                if np.random.random() < 0.35:
+                    hour = np.random.choice([12, 13, 14], p=[0.4, 0.4, 0.2])
+                else:
+                    hour = np.random.choice([17, 18, 19, 20, 21], p=[0.1, 0.25, 0.35, 0.20, 0.10])
+
+                party_size = np.random.choice([1, 2, 3, 4, 5, 6], p=[0.15, 0.30, 0.25, 0.15, 0.10, 0.05])
+                if order_type != 'Dine-in':
+                    party_size = 1
+
+                items_ordered = np.random.choice(list(menu_items.keys()), size=n_items, replace=True)
+
+                for item in items_ordered:
+                    info = menu_items[item]
+                    qty = np.random.choice([1, 2], p=[0.85, 0.15])
+                    transactions.append({
+                        'OrderID': f'ORD_{order_id}',
+                        'Date': date.date(),
+                        'Location': loc,
+                        'OrderType': order_type,
+                        'Hour': hour,
+                        'DayOfWeek': date.strftime('%A'),
+                        'Month': date.strftime('%B'),
+                        'PartySize': party_size,
+                        'MenuItem': item,
+                        'Category': info['category'],
+                        'Quantity': qty,
+                        'UnitPrice': info['price'],
+                        'UnitCost': info['cost'],
+                        'PrepTime': info['prep_time'],
+                    })
+
+    df_txn = pd.DataFrame(transactions)
     df_txn['Revenue'] = df_txn['Quantity'] * df_txn['UnitPrice']
     df_txn['Cost'] = df_txn['Quantity'] * df_txn['UnitCost']
     df_txn['GrossProfit'] = df_txn['Revenue'] - df_txn['Cost']
 
+    # Generate labour data
+    roles = {'Chef': 14.50, 'Kitchen Porter': 11.50, 'Waiter': 12.00, 'Bar Staff': 12.50, 'Manager': 18.00, 'Delivery Driver': 11.00}
+    labour_records = []
+
+    for day_offset in range(N_DAYS):
+        date = START_DATE + pd.Timedelta(days=day_offset)
+        dow = date.weekday()
+
+        for loc in locations:
+            base_hours = {0: 40, 1: 40, 2: 45, 3: 50, 4: 60, 5: 80, 6: 65}[dow]
+            loc_multiplier = {'Fareham': 1.0, 'Bexley': 0.85, 'Leamington Spa': 0.60}[loc]
+            total_hours = int(base_hours * loc_multiplier)
+
+            for role, wage in roles.items():
+                if role == 'Manager':
+                    hours = 8 if dow in [4, 5, 6] else 6
+                elif role == 'Delivery Driver':
+                    hours = int(total_hours * 0.15) if dow in [4, 5, 6] else int(total_hours * 0.10)
+                else:
+                    pct = {'Chef': 0.25, 'Kitchen Porter': 0.20, 'Waiter': 0.25, 'Bar Staff': 0.15}[role]
+                    hours = int(total_hours * pct)
+
+                labour_records.append({
+                    'Date': date.date(),
+                    'Location': loc,
+                    'Role': role,
+                    'Hours': hours,
+                    'HourlyRate': wage,
+                    'LabourCost': round(hours * wage, 2),
+                })
+
+    df_labour = pd.DataFrame(labour_records)
+
+    # Campaign data
+    campaigns = [
+        {'Campaign': 'Summer Feast Promo', 'Channel': 'Facebook/Instagram', 'Spend': 2500, 'Start': '2025-07-01', 'End': '2025-08-15', 'Target': 'Takeaway'},
+        {'Campaign': 'Back to School Lunch', 'Channel': 'Google Ads', 'Spend': 1800, 'Start': '2025-09-01', 'End': '2025-09-30', 'Target': 'Dine-in'},
+        {'Campaign': 'Halloween Special', 'Channel': 'Facebook/Instagram', 'Spend': 1500, 'Start': '2025-10-20', 'End': '2025-11-05', 'Target': 'Dine-in'},
+        {'Campaign': 'Black Friday Deal', 'Channel': 'Email/SMS', 'Spend': 800, 'Start': '2025-11-20', 'End': '2025-11-30', 'Target': 'All'},
+        {'Campaign': 'Christmas Feast', 'Channel': 'Facebook/Instagram', 'Spend': 3500, 'Start': '2025-12-01', 'End': '2025-12-31', 'Target': 'Dine-in'},
+        {'Campaign': 'New Year Healthy Start', 'Channel': 'Google Ads', 'Spend': 2000, 'Start': '2026-01-05', 'End': '2026-02-10', 'Target': 'Takeaway'},
+        {'Campaign': 'Valentine Dinner', 'Channel': 'Facebook/Instagram', 'Spend': 1200, 'Start': '2026-02-01', 'End': '2026-02-14', 'Target': 'Dine-in'},
+        {'Campaign': 'Spring Festival', 'Channel': 'Email/SMS', 'Spend': 1000, 'Start': '2026-03-15', 'End': '2026-04-15', 'Target': 'All'},
+        {'Campaign': 'Easter Family Deal', 'Channel': 'Google Ads', 'Spend': 1600, 'Start': '2026-04-01', 'End': '2026-04-20', 'Target': 'Dine-in'},
+        {'Campaign': 'May Bank Holiday', 'Channel': 'Facebook/Instagram', 'Spend': 1400, 'Start': '2026-05-01', 'End': '2026-05-10', 'Target': 'All'},
+    ]
+    df_campaigns = pd.DataFrame(campaigns)
+
+    # Competitor prices
+    competitor_prices = pd.DataFrame({
+        'MenuItem': list(menu_items.keys()),
+        'OurPrice': [menu_items[k]['price'] for k in menu_items.keys()],
+        'Golden Dragon': [round(p + np.random.uniform(-2, 3), 2) for p in [menu_items[k]['price'] for k in menu_items.keys()]],
+        'China Garden': [round(p + np.random.uniform(-1.5, 2.5), 2) for p in [menu_items[k]['price'] for k in menu_items.keys()]],
+        'Wok This Way': [round(p + np.random.uniform(-1, 4), 2) for p in [menu_items[k]['price'] for k in menu_items.keys()]],
+    })
+    competitor_prices['CompetitorAvg'] = competitor_prices[['Golden Dragon', 'China Garden', 'Wok This Way']].mean(axis=1).round(2)
+    competitor_prices['PriceDiffPct'] = ((competitor_prices['OurPrice'] - competitor_prices['CompetitorAvg']) / competitor_prices['CompetitorAvg'] * 100).round(1)
+
     return df_txn, df_labour, df_campaigns, competitor_prices
 
 
-data = load_data()
-if data[0] is None:
-    st.stop()
-
-df_txn, df_labour, df_campaigns, competitor_prices = data
+# Try to load from files first, fallback to generation
+try:
+    df_txn = pd.read_csv('data/restaurant_transactions.csv')
+    df_labour = pd.read_csv('data/restaurant_labour.csv')
+    df_campaigns = pd.read_csv('data/restaurant_campaigns.csv')
+    competitor_prices = pd.read_csv('data/competitor_prices.csv')
+    df_txn['Revenue'] = df_txn['Quantity'] * df_txn['UnitPrice']
+    df_txn['Cost'] = df_txn['Quantity'] * df_txn['UnitCost']
+    df_txn['GrossProfit'] = df_txn['Revenue'] - df_txn['Cost']
+except FileNotFoundError:
+    df_txn, df_labour, df_campaigns, competitor_prices = generate_and_load_data()
 
 # ============================================================
 # SIDEBAR FILTERS
@@ -127,31 +263,22 @@ with left:
 
     menu_perf['Quadrant'] = menu_perf.apply(quad, axis=1)
 
-    fig, ax = plt.subplots(figsize=(6, 4))
-    quad_colors = {'Star': '#2ecc71', 'Plough Horse': '#f39c12', 'Puzzle': '#3498db', 'Dog': '#e74c3c'}
-    for q in menu_perf['Quadrant'].unique():
+    for q in ['Star', 'Plough Horse', 'Puzzle', 'Dog']:
         subset = menu_perf[menu_perf['Quadrant'] == q]
-        ax.scatter(subset['MenuMixPct'], subset['AvgMarginPct'], c=quad_colors[q], label=q, s=100, alpha=0.8, edgecolors='white', linewidth=0.5)
-    ax.axvline(pop_med, color='gray', linestyle='--', alpha=0.5)
-    ax.axhline(mar_med, color='gray', linestyle='--', alpha=0.5)
-    ax.set_xlabel('Menu Mix (%)')
-    ax.set_ylabel('Margin (%)')
-    ax.legend(loc='lower left', fontsize=8)
-    ax.grid(alpha=0.3)
-    st.pyplot(fig)
+        if len(subset) > 0:
+            st.write(f"**{q}** ({len(subset)} items)")
+            st.dataframe(subset[['MenuItem', 'MenuMixPct', 'AvgMarginPct']].rename(columns={
+                'MenuItem': 'Item', 'MenuMixPct': 'Popularity %', 'AvgMarginPct': 'Margin %'
+            }), hide_index=True, use_container_width=True)
+
+    st.caption(f"Median popularity: {pop_med:.1f}% | Median margin: {mar_med:.1f}%")
 
 with right:
     st.subheader("Revenue by Location (Monthly)")
     daily = filtered_txn.groupby(['Date', 'Location'])['Revenue'].sum().reset_index()
-    daily['Month'] = pd.to_datetime(daily['Date']).dt.to_period('M')
+    daily['Month'] = pd.to_datetime(daily['Date']).dt.to_period('M').astype(str)
     monthly = daily.groupby(['Month', 'Location'])['Revenue'].sum().unstack(fill_value=0)
-
-    fig, ax = plt.subplots(figsize=(6, 4))
-    monthly.plot(ax=ax, marker='o', linewidth=2)
-    ax.set_ylabel('Revenue (£)')
-    ax.legend(title='Location', fontsize=8)
-    ax.grid(alpha=0.3)
-    st.pyplot(fig)
+    st.line_chart(monthly)
 
 # ============================================================
 # CHARTS ROW 2
@@ -161,14 +288,7 @@ left2, right2 = st.columns(2)
 with left2:
     st.subheader("Demand by Hour & Order Type")
     hourly = filtered_txn.groupby(['Hour', 'OrderType'])['OrderID'].nunique().unstack(fill_value=0)
-    fig, ax = plt.subplots(figsize=(6, 4))
-    hourly.plot(kind='bar', stacked=True, ax=ax, color=['#e74c3c', '#3498db', '#2ecc71'], alpha=0.85)
-    ax.set_xlabel('Hour')
-    ax.set_ylabel('Orders')
-    ax.legend(title='Order Type', fontsize=8)
-    ax.tick_params(axis='x', rotation=0)
-    ax.grid(axis='y', alpha=0.3)
-    st.pyplot(fig)
+    st.bar_chart(hourly)
 
 with right2:
     st.subheader("Marketing Campaign ROAS")
@@ -186,15 +306,8 @@ with right2:
         camp_results.append({'Campaign': camp['Campaign'], 'ROAS': roas, 'Spend': camp['Spend']})
 
     camp_df = pd.DataFrame(camp_results).sort_values('ROAS', ascending=True)
-    fig, ax = plt.subplots(figsize=(6, 4))
-    colors = ['#2ecc71' if r > 15 else '#f39c12' if r > 10 else '#e74c3c' for r in camp_df['ROAS']]
-    ax.barh(camp_df['Campaign'], camp_df['ROAS'], color=colors, alpha=0.85)
-    ax.set_xlabel('ROAS')
-    ax.axvline(x=10, color='gray', linestyle='--', alpha=0.5)
-    ax.spines['top'].set_visible(False)
-    ax.spines['right'].set_visible(False)
-    ax.grid(axis='x', alpha=0.3)
-    st.pyplot(fig)
+    camp_df = camp_df.set_index('Campaign')
+    st.bar_chart(camp_df[['ROAS']])
 
 st.divider()
 
@@ -225,15 +338,8 @@ labour_summary = filtered_labour.groupby(['Location', 'Role']).agg({
     'LabourCost': 'sum'
 }).reset_index()
 
-fig, ax = plt.subplots(figsize=(10, 4))
 labour_pivot = labour_summary.pivot(index='Role', columns='Location', values='LabourCost').fillna(0)
-labour_pivot.plot(kind='bar', ax=ax, color=['#e74c3c', '#3498db', '#2ecc71'], alpha=0.85)
-ax.set_ylabel('Labour Cost (£)')
-ax.set_title('Labour Cost by Role & Location')
-ax.legend(title='Location')
-ax.tick_params(axis='x', rotation=30)
-ax.grid(axis='y', alpha=0.3)
-st.pyplot(fig)
+st.bar_chart(labour_pivot)
 
 st.divider()
 
