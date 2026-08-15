@@ -97,7 +97,7 @@ streamlit run app.py
 
 ### Competitor Price Benchmarking
 
-- **Kiang Nan is priced 3-5% below** competitors on average — room to increase prices on Star items
+- **The restaurant is priced 3-5% below** competitors on average — room to increase prices on Star items
 - **Crispy Duck** is underpriced vs. Golden Dragon (£18.95 vs. £20.50) — can raise to £19.95 without losing share
 - **Drinks** have 74% margin but low attachment rate — upsell training opportunity
 
