@@ -107,6 +107,9 @@ streamlit run app.py
 - **Monday-Tuesday** at Bexley and Leamington Spa are loss-making days — reduce opening hours or staff levels
 - **Manager hours** are flat across days — shift more weekend coverage, less weekday
 
+### Visualizations
+![Commercial Intelligence](assets/01_commercial_intelligence.png)
+
 ---
 
 ## Project Structure
