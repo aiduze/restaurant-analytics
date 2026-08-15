@@ -159,4 +159,4 @@ Or deploy free to [Streamlit Community Cloud](https://share.streamlit.io).
 
 ## Author
 
-Built by Aisha Duze for restaurant group Business Analyst roles.
+Built by Aisha Duze.
