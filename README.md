@@ -2,7 +2,7 @@
 
 > **End-to-end business analytics project** for a UK multi-location restaurant group — covering menu engineering, location profitability, marketing ROI, competitor benchmarking, and labour cost optimization.
 
-Built as a portfolio piece targeting **Business Analyst (Media & Commercial Research)** roles in the UK food services sector.
+Built as a portfolio piece targeting **Business Analyst (Media & Commercial Research)** roles in the food services sector.
 
 ---
 
@@ -159,4 +159,4 @@ Or deploy free to [Streamlit Community Cloud](https://share.streamlit.io).
 
 ## Author
 
-Built for UK food services / restaurant group Business Analyst roles.
+Built by Aisha Duze for restaurant group Business Analyst roles.
